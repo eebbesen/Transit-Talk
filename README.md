@@ -81,6 +81,7 @@ If you have problems installing the `mysql2` gem, the likeliest explanation is t
 * Debian GNU/Linux: `sudo apt install libmariadb-dev`
 * WSL: `sudo apt-get upgrade`, then `sudo apt-get install libmysqlclient-dev`
 * macOS
+  * `brew install openssl && export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/opt/openssl/lib/` installs openssl and lets the compiler know where to find it
   * `brew install mysql` will install to /usr/local/Cellar/mysql/x.x.x
   * `gem install mysql2 -v 'y.y.y' -- --srcdir='/usr/local/Cellar/mysql/x.x.x/include'`
     * `x.x.x` is where brew installed mysql
@@ -88,7 +89,10 @@ If you have problems installing the `mysql2` gem, the likeliest explanation is t
 
 ### Local Testing
 
-Navigate to root directory of the project, run `rails db:migrate` to create the database, then run `rails server`. Connect to [localhost:3000](http://localhost:3000) on your browser.
+Navigate to root directory of the project, run `yarn install` to install JavaScript dependencies, run `rails db:migrate` to create the database, then run `rails server`. Connect to [localhost:3000](http://localhost:3000) on your browser.
+
+#### Unit testing
+Run `rails test` to execute the unit test suite.
 
 ## Contributor Guide
 To learn more about how to contribute to Transit Talk's development, check out [our contribution guidelines][contributing].
