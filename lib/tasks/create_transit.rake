@@ -64,24 +64,36 @@ namespace :transit do
     Line.import($lines)
   end
 
-  def stop_times(trip_id)
+  def extract_stop_times
+    return @stop_times_path if @stop_times_path
+
     path = ENV['GTFS_FILE']
     verify_file(path)
     `unzip -o #{path} stop_times.txt -d tmp`
-    stop_times_path = "#{Rails.root}/tmp/stop_times.txt"
+    @stop_times_path = "#{Rails.root}/tmp/stop_times.txt"
     unless path.present?
       puts "File not extracted successfully. Exiting"
       exit 1
     end
+    @stop_times_path
+  end
+
+  def stop_times(trip_id)
+    stop_times_path = extract_stop_times
     relevant_data = `grep ^#{trip_id}, #{stop_times_path}` # Urgh
     GTFS::StopTime.parse_stop_times(`head -1 #{stop_times_path}` + relevant_data)
+  end
+
+  def persist_lines_stops(pairs)
+    values = pairs.map{|p| "(" + p[0].to_s + "," + p[1].to_s + ")" }.join(",")
+    ActiveRecord::Base.connection.execute("INSERT INTO lines_stops (stop_onestop_id, line_onestop_id) VALUES #{values}")
   end
 
   task populate_lines: :environment do
     stops = Stop.all
     lines = Line.all
-    pairs = []
 
+    pairs = []
 
     path = ENV['GTFS_FILE']
     verify_file(path)
@@ -97,15 +109,20 @@ namespace :transit do
         end
         .map(&:original)
 
-        line = lines.find{|l| l.api_id == trip.route_id }
+        line = lines.find{|l| l.name == trip.route_id }
         stops2.each do |stop|
-          pairs << [stop.id, line.id]
+          # activerecord returning ids as nil, so using attributes
+          pairs << [stop.attributes['id'], line.attributes['id']]
+        end
+
+        puts "collected #{pairs.count} pairs #{Time.now}" #if (pairs.count % 10 == 0)
+
+        if pairs.count > 100
+          persist_lines_stops pairs
+          pairs = []
         end
       end
     end
-
-    values = pairs.map{|p| "(" + p[0].to_s + "," + p[1].to_s + ")" }.join(",")
-    ActiveRecord::Base.connection.execute("INSERT INTO lines_stops (stop_id, line_id) VALUES #{values}")
   end
 
   task set_up_transit: :environment do
